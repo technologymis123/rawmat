@@ -100,11 +100,11 @@ module.exports = (app, pool, sql, config) => {
             }
             if (ph !== undefined) {
                 updateQuery += "ph=@ph, ";
-                queryParams.push({ name: "ph", value: handleNull(parseFloat(ph)) });
-            }
+                queryParams.push({ name: "ph", value: handleNull(ph?.toString()) }); // Convert to string explicitly
+            }              
             if (viscosity !== undefined) {
                 updateQuery += "viscosity=@viscosity, ";
-                queryParams.push({ name: "viscosity", value: handleNull(parseFloat(viscosity)) });
+                queryParams.push({ name: "viscosity", value: handleNull(viscosity?.toString()) });
             }
             if (odour !== undefined) {
                 updateQuery += "odour=@odour, ";
@@ -120,7 +120,7 @@ module.exports = (app, pool, sql, config) => {
             }
             if (density !== undefined) {
                 updateQuery += "density=@density, ";
-                queryParams.push({ name: "density", value: handleNull(density) });
+                queryParams.push({ name: "density", value: handleNull(density?.toString()) });
             }
             if (prepared_by !== undefined) {
                 updateQuery += "prepared_by=@prepared_by, ";
