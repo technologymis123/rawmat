@@ -2,16 +2,23 @@ module.exports = (app, pool, sql) => {
     // Route to handle user login
     app.post("/login", async (req, res) => {
         const { name, password } = req.body; // Use 'name' instead of 'email'
-
+    
         try {
             const userResult = await pool
                 .request()
                 .input("name", sql.VarChar, name)
                 .query("SELECT * FROM Users WHERE name = @name"); // Search by 'name'
-
+    
             if (userResult.recordset.length > 0) {
                 const user = userResult.recordset[0];
                 if (user.password === password) {
+                    // Update the login timestamp
+                    await pool
+                        .request()
+                        .input("name", sql.VarChar, name)
+                        .query("UPDATE Users SET timestamp = GETUTCDATE() WHERE name = @name");
+    
+                    // Send success response with role
                     res.json({ status: "Success", role: user.role });
                 } else {
                     res.json("Wrong password");
@@ -24,7 +31,7 @@ module.exports = (app, pool, sql) => {
             res.status(500).send("Server error");
         }
     });
-
+    
     // Route to handle user registration
     app.post("/register", async (req, res) => {
         const { name, password } = req.body; // Remove 'email'

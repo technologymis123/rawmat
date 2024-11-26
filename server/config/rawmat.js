@@ -44,13 +44,13 @@ module.exports = (app, pool, sql, config) => {
                 (Code, Description, INCI, ISO_16128_Natural_Origin_Content, Batch_Lot_No, Expiry_date,
                 Key_In_Date, Appearance, Country_Of_Origin, Source_Of_Origin, Dossage, Write_up, 
                 Preservative, Remark, Awards, Comedogenic_Rating, Online_Feedback, Category, Upcycle,
-                Sustainability, Cruelty_Free, Vegan_friendly)
+                Sustainability, Cruelty_Free, Vegan_friendly, [timestamp])
                 VALUES 
                 (@Code, @Description, @INCI, @ISO_16128_Natural_Origin_Content, @Batch_Lot_No, @Expiry_date,
                 @Key_In_Date, @Appearance, @Country_Of_Origin, @Source_Of_Origin, @Dossage, @Write_up,
                 @Preservative, @Remark, @Awards, @Comedogenic_Rating, @Online_Feedback, @Category,
-                @Upcycle, @Sustainability, @Cruelty_Free, @Vegan_friendly)
-            `);
+                @Upcycle, @Sustainability, @Cruelty_Free, @Vegan_friendly, GETUTCDATE())
+            `);            
 
             res.status(201).json({ success: "Raw material entry added successfully" });
         } catch (err) {
@@ -63,7 +63,7 @@ module.exports = (app, pool, sql, config) => {
     app.get("/api/rawmat", async (req, res) => {
         try {
             const pool = await sql.connect(config);
-            const result = await pool.request().query("SELECT Code, Description, INCI FROM [RawMaterialsDB].[dbo].[RawMat]");
+            const result = await pool.request().query("SELECT Code, Description, INCI, timestamp FROM [RawMaterialsDB].[dbo].[RawMat]");
             res.json(result.recordset);
         } catch (err) {
             console.error("Error fetching data:", err);
@@ -213,9 +213,14 @@ module.exports = (app, pool, sql, config) => {
                 queryParams.push({ name: "Vegan_friendly", value: handleNull(Vegan_friendly) });
             }
 
-            // Remove the trailing comma and space from the query string
-            updateQuery = updateQuery.slice(0, -2);
-
+            // Always update timestamp
+            updateQuery += "timestamp=GETUTCDATE(), ";
+            
+            // Remove trailing comma
+            if (updateQuery.trim().endsWith(",")) {
+                updateQuery = updateQuery.trim().slice(0, -1);
+            }        
+    
             // Add the WHERE clause
             updateQuery += " WHERE Code=@code";
 

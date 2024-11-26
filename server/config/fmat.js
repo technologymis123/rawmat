@@ -41,7 +41,9 @@ module.exports = (app, pool, sql, config) => {
             const { fmatid } = req.params;
             const { sample_code, Code, percentage, active_ingredient } = req.body;
 
+            const pool = await sql.connect(config);
             const request = pool.request();
+
             request.input("fmatid", sql.Int, fmatid); // fmatid is an integer
 
             let updateQuery = "UPDATE [RawMaterialsDB].[dbo].[fmat] SET ";
@@ -68,11 +70,16 @@ module.exports = (app, pool, sql, config) => {
                 queryParams.push({ name: "active_ingredient", value: handleNull(active_ingredient) });
             }
 
-            // Remove the trailing comma and space from the query string
-            updateQuery = updateQuery.slice(0, -2);
+            // Always update timestamp
+            updateQuery += "timestamp=GETUTCDATE(), ";
+            
+            // Remove trailing comma
+            if (updateQuery.trim().endsWith(",")) {
+                updateQuery = updateQuery.trim().slice(0, -1);
+            }        
 
             // Add the WHERE clause
-            updateQuery += " WHERE fmatid=@fmatid";
+            updateQuery += "WHERE fmatid=@fmatid";
 
             // Add parameters to the request
             queryParams.forEach(param => {
@@ -93,7 +100,7 @@ module.exports = (app, pool, sql, config) => {
     // Route to add a new fmat entry
     app.post("/api/fmat", async (req, res) => {
         const { sample_code, Code, percentage, active_ingredient } = req.body;
-    
+
         try {
             const pool = await sql.connect(config);
             await pool.request()
@@ -102,8 +109,9 @@ module.exports = (app, pool, sql, config) => {
                 .input("percentage", sql.VarChar(50), percentage)
                 .input("active_ingredient", sql.VarChar(3), active_ingredient)
                 .query(`
-                    INSERT INTO FMAT (sample_code, Code, percentage, active_ingredient)
-                    VALUES (@sample_code, @Code, @percentage, @active_ingredient)
+                    INSERT INTO [RawMaterialsDB].[dbo].[fmat] 
+                    (sample_code, Code, percentage, active_ingredient, timestamp)
+                    VALUES (@sample_code, @Code, @percentage, @active_ingredient, GETUTCDATE())
                 `);
             res.status(200).send("FMAT entry created successfully!");
         } catch (err) {
@@ -111,6 +119,7 @@ module.exports = (app, pool, sql, config) => {
             res.status(500).send("Failed to insert FMAT data.");
         }
     });
+
 
     // Route to delete a fmat entry by fmatid
     app.delete("/api/fmat/:fmatid", async (req, res) => {

@@ -81,28 +81,7 @@ module.exports = (app, pool, sql, config) => {
             res.status(500).json({ error: "Failed to update user data" });
         }
     });
-
-    // Route to add a new user
-    app.post("/api/users", async (req, res) => {
-        const { name, password, role } = req.body;
     
-        try {
-            const pool = await sql.connect(config);
-            await pool.request()
-                .input("name", sql.VarChar(50), name)
-                .input("password", sql.NVarChar(50), password)
-                .input("role", sql.VarChar(50), role)
-                .query(`
-                    INSERT INTO Users (name, password, role)
-                    VALUES (@name, @password, @role)
-                `);
-            res.status(200).send("User created successfully!");
-        } catch (err) {
-            console.error("Error inserting user data:", err);
-            res.status(500).send("Failed to insert user data.");
-        }
-    });
-
     // Route to delete a user by name
     app.delete("/api/users/:name", async (req, res) => {
         const { name } = req.params;

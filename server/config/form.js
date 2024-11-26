@@ -5,7 +5,8 @@ module.exports = (app, pool, sql, config) => {
     app.get("/api/form", async (req, res) => {
         try {
             const pool = await sql.connect(config);
-            const result = await pool.request().query("SELECT sample_code, item FROM [RawMaterialsDB].[dbo].[form]");  // Replace with actual table name
+            const result = await pool.request().query
+            ("SELECT sample_code, item, timestamp FROM [RawMaterialsDB].[dbo].[form]");
             res.json(result.recordset);
         } catch (err) {
             console.error("Error fetching data:", err);
@@ -21,7 +22,7 @@ module.exports = (app, pool, sql, config) => {
             const pool = await sql.connect(config);
             const result = await pool.request()
                 .input("sample_code", sql.VarChar, sample_code)
-                .query("SELECT * FROM [RawMaterialsDB].[dbo].[form] WHERE sample_code = @sample_code");  // Replace with actual table name
+                .query("SELECT * FROM [RawMaterialsDB].[dbo].[form] WHERE sample_code = @sample_code");
             
             if (result.recordset.length === 0) {
                 return res.status(404).json({ error: "Form not found" });
@@ -130,8 +131,13 @@ module.exports = (app, pool, sql, config) => {
                 queryParams.push({ name: "approved_by", value: handleNull(approved_by) });
             }
     
-            // Remove the trailing comma and space from the query string
-            updateQuery = updateQuery.slice(0, -2);
+            // Always update timestamp
+            updateQuery += "timestamp=GETUTCDATE(), ";
+            
+            // Remove trailing comma
+            if (updateQuery.trim().endsWith(",")) {
+                updateQuery = updateQuery.trim().slice(0, -1);
+            }        
     
             // Add the WHERE clause
             updateQuery += " WHERE sample_code=@sample_code";
@@ -181,7 +187,7 @@ module.exports = (app, pool, sql, config) => {
             request.input("viscosity", sql.VarChar(50), viscosity || null);
             request.input("packaging", sql.VarChar(50), packaging || null);
             request.input("remarks", sql.VarChar(100), remarks || null);
-            request.input("density", sql.VarChar(100), density || null); // Assuming density is a string; adjust if needed
+            request.input("density", sql.VarChar(100), density || null); 
             request.input("prepared_by", sql.VarChar(50), prepared_by || null);
             request.input("approved_by", sql.VarChar(50), approved_by || null);
 
@@ -190,11 +196,11 @@ module.exports = (app, pool, sql, config) => {
                 INSERT INTO [RawMaterialsDB].[dbo].[form] 
                 (sample_code, product_code, item, file_name, customer, marketer, pic1, pic2, 
                 form_no, date, appearance, colour, ph, viscosity, packaging, remarks, 
-                density, prepared_by, approved_by)
+                density, prepared_by, approved_by, timestamp)
                 VALUES 
                 (@sample_code, @product_code, @item, @file_name, @customer, @marketer, 
                 @pic1, @pic2, @form_no, @date, @appearance, @colour, @ph, @viscosity, 
-                @packaging, @remarks, @density, @prepared_by, @approved_by)
+                @packaging, @remarks, @density, @prepared_by, @approved_by, GETUTCDATE())
             `);
 
             res.status(201).json({ success: "Form entry added successfully" });
