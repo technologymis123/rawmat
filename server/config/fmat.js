@@ -2,17 +2,36 @@ const sql = require("mssql");
 
 module.exports = (app, pool, sql, config) => {
 
-    // Route to fetch all fmat data
+    // Route to fetch all fmat data, enriched with Description from RawMat
     app.get("/api/fmat", async (req, res) => {
         try {
             const pool = await sql.connect(config);
-            const result = await pool.request().query("SELECT * FROM [RawMaterialsDB].[dbo].[fmat]");
+
+            // Join fmat with RawMat to fetch Description
+            const result = await pool.request().query(`
+                SELECT 
+                    fmat.fmatid,
+                    fmat.sample_code,
+                    fmat.Code,
+                    fmat.percentage,
+                    fmat.active_ingredient,
+                    fmat.timestamp,
+                    RawMat.Description -- Fetch Description from RawMat
+                FROM 
+                    [RawMaterialsDB].[dbo].[fmat] AS fmat
+                LEFT JOIN 
+                    [RawMaterialsDB].[dbo].[RawMat] AS RawMat
+                ON 
+                    fmat.Code = RawMat.Code
+            `);
+
             res.json(result.recordset);
         } catch (err) {
             console.error("Error fetching fmat data:", err);
             res.status(500).json({ error: "Failed to fetch fmat data" });
         }
     });
+
 
     // Route to fetch a single fmat entry by fmatid
     app.get("/api/fmat/:fmatid", async (req, res) => {
